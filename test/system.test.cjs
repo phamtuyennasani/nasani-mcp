@@ -59,8 +59,17 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.equal(workflow.data.standalone_contract, undefined);
     assert.ok(workflow.data.instructions.includes('active Codex/Claude coding session'));
     assert.ok(workflow.data.delivery.includes('directly'));
+    assert.deepEqual(workflow.data.figma_handoff, {
+        skill: 'figma-design-to-code',
+        primary_tool: 'get_design_context',
+        action: 'Call the host Figma MCP get_design_context for the supplied node before writing code.',
+        preflight: 'Do not call nasani_environment, probe Figma connectivity, or ask for credentials before this Figma call.',
+        on_error: 'Stop and report the exact Figma MCP error. Do not retry with another account, token, or NASANI client secret.'
+    });
+    assert.match(workflow.data.next, /get_design_context first/);
     const withContext = await call(client, 'nasani_workflow', { ...workflowArgs, output_mode: 'standalone', figma_context: 'Figma MCP: frame width 1440, wrapper max-width 1200.' });
     assert.equal(withContext.data.figma_context_received, true);
+    assert.match(withContext.data.figma_handoff.action, /supplied Figma context/);
     assert.ok(withContext.data.standalone_contract.includes('max-width: 1200px'));
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, design_url: 'https://figma.com.evil.invalid/design/123' })).isError, true);
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, figma_context: 'x'.repeat(16001) })).isError, true);

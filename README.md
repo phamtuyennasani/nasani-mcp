@@ -16,7 +16,7 @@ npx skills add phamtuyennasani/nasani-mcp -g --agent codex claude-code --yes
 
 Chỉ dùng một client thì giữ `codex` hoặc `claude-code` trong `--agent`. Lệnh này cài **skill, tài liệu và helper**, chưa chạy installer MCP hay đăng nhập Figma. Mở dự án trong AI client và yêu cầu:
 
-> Dùng skill nasani-figma triển khai frame [link Figma] vào [route/component] trong dự án đang mở. Nếu thiếu NASANI MCP thì chạy helper đi kèm skill để cài và kiểm tra nasani_environment; tiếp tục ghi code trực tiếp vào source.
+> Dùng skill nasani-figma triển khai frame [link Figma] vào [route/component] trong dự án đang mở. Gọi skill figma-design-to-code và get_design_context trực tiếp; nếu Figma trả lỗi thì báo nguyên văn lỗi. Chỉ dùng NASANI runner khi đã có output cần kiểm tra.
 
 Ở lần dùng đầu, skill hướng dẫn AI chạy helper `scripts/nasani.cjs`: tự tải runtime cố định, đăng ký MCP cho đúng dự án và gọi MCP thật qua STDIO. Nếu client chưa nạp tool mới, helper tiếp tục gọi validate/format/assets ngay trong phiên hiện tại; tên tool native `nasani_*` chỉ xuất hiện sau khi client nạp lại MCP. AI cần quyền chạy shell; trust/approval vẫn theo chính sách client. Kết nối Figma MCP riêng bằng tài khoản của bạn.
 
@@ -64,7 +64,7 @@ npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client b
 
 Thay `both` bằng `codex` hoặc `claude`; thêm `--mcp-only` nếu chỉ muốn MCP. Có thể dùng `--project /duong-dan-tuyet-doi/du-an` thay cho thư mục hiện tại. Chạy lại giữ nguyên config phù hợp; nếu NASANI/skill đã tùy chỉnh thì báo xung đột, không tự ghi đè. Các dự án dùng chung runtime local này. Đường cài thủ công bên dưới vẫn dùng được.
 
-Sau cài, mở lại đúng dự án trong Codex/Claude, chấp thuận MCP/trust khi được hỏi, rồi gửi `Gọi nasani_environment`. Kiểm tra `mode: local` và `project_root` đúng dự án. Kết nối Figma MCP bằng tài khoản riêng của từng người nếu chưa có; installer NASANI không tự đăng nhập Figma.
+Sau cài, mở lại đúng dự án trong Codex/Claude và chấp thuận MCP/trust khi được hỏi. Gửi yêu cầu triển khai Figma; AI phải gọi Figma MCP đang có trước. Không cần gọi `nasani_environment` trước khi đọc Figma. Chỉ khi có output standalone cần validate/format/assets mới gọi environment một lần, rồi dùng lại kết quả. Kết nối Figma MCP bằng tài khoản riêng của từng người; installer NASANI không tự đăng nhập Figma.
 
 ## Dùng ngay trong phiên AI coding
 
@@ -72,8 +72,8 @@ Luồng mặc định là **MCP local**, cài vào Codex/Claude đang dùng. AI 
 
 ```text
 Bạn gửi link Figma trong Codex/Claude
-  → AI gọi Figma MCP để lấy context, screenshot, assets
-  → AI dùng skill đã đọc, hoặc gọi nasani_workflow một lần
+  → AI gọi figma-design-to-code + get_design_context trực tiếp
+  → NASANI nhận context và hướng dẫn triển khai, không probe Figma
   → AI của phiên hiện tại phân tích và ghi code vào dự án
   → NASANI kiểm tra/format output phù hợp, AI render và sửa tiếp
 ```
@@ -116,9 +116,9 @@ claude mcp add --transport http figma https://mcp.figma.com/mcp
 
 Sau khi client thấy các tool NASANI và Figma, yêu cầu:
 
-> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Dùng skill đã đọc hoặc lấy workflow một lần nếu chưa có, đọc Figma MCP, phân tích bằng phiên AI hiện tại, ghi trực tiếp vào source rồi kiểm tra giao diện.
+> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Gọi skill figma-design-to-code và get_design_context trực tiếp, không chạy Figma health check. Nếu Figma lỗi thì báo nguyên văn lỗi; nếu thành công, ghi code trực tiếp vào source rồi chỉ dùng NASANI runner cho output cần kiểm tra.
 
-`nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Tool này trả hướng dẫn, không tự suy luận hay âm thầm gọi lại AI. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
+`nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Kết quả có `figma_handoff` yêu cầu host gọi `figma-design-to-code`/`get_design_context` trực tiếp. Tool này không probe Figma, không tự suy luận và không âm thầm gọi lại AI. Nếu lời gọi Figma lỗi, host báo đúng lỗi đó. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
 
 Với output standalone, sau khi tạo đủ source/assets, gọi `nasani_format` để kiểm tra asset, validate trước/sau và format trong một lượt. Không cần chuỗi mặc định `validate → assets → format → validate` trên cùng đầu ra không đổi. Dùng `nasani_validate` cho audit chỉ đọc/chẩn đoán lỗi hoặc sau khi sửa tiếp; dùng `nasani_assets` khi cần danh sách asset/chẩn đoán. Kiểm tra build/lint/type phù hợp và so sánh browser vẫn thực hiện sau triển khai.
 
@@ -170,8 +170,8 @@ Skill chọn cấu trúc/framework của dự án hiện có. Validator NASANI c
 
 | Tool | Input local / bridge | Input HTTP trực tiếp | Kết quả |
 | --- | --- | --- | --- |
-| `nasani_workflow` | `design_url`, `target`, `output_mode?`, `figma_context?` | Như local | Hướng dẫn làm trực tiếp trong phiên; contract standalone khi cần |
-| `nasani_environment` | `{}` | `{}` | Dependencies và mode |
+| `nasani_workflow` | `design_url`, `target`, `output_mode?`, `figma_context?` | Như local | Figma handoff + hướng dẫn; không kiểm tra kết nối Figma |
+| `nasani_environment` | `{}` | `{}` | Runner dependencies/mode; chỉ gọi khi cần runner |
 | `nasani_validate` | `directory`, `content_width`, options | `bundle`, `content_width`, options | Lỗi AST/policy |
 | `nasani_format` | Như validate | Như validate | Local/bridge ghi 2 source; remote trả `source` |
 | `nasani_assets` | `directory` | `bundle` | Assets đang được tham chiếu; không xóa |
