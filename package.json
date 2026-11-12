@@ -11,7 +11,7 @@
   },
   "scripts": {
     "start": "node bin/nasani.cjs serve",
-    "test": "node --test test/system.test.cjs"
+    "test": "node --test test/*.test.cjs"
   },
   "files": [
     "bin",

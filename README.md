@@ -2,6 +2,34 @@
 
 Project Node độc lập cho luồng **Figma → code trong dự án → kiểm tra/format bằng NASANI**. Chứa bản riêng của engine HTML/CSS, SVG và Swiper hiện có; không cần Laravel, PHP, database hoặc thư mục `tools123`.
 
+## Cài nhanh bằng một lệnh
+
+Mở Terminal **tại thư mục dự án cần triển khai**, rồi chạy (cần Git và Node.js >=22):
+
+```sh
+npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup
+```
+
+Chọn client rồi Enter:
+
+```text
+1) Codex
+2) Claude Code
+3) Cả hai
+```
+
+Enter không nhập số mặc định chọn Codex. Lệnh tự tải công cụ, cài runtime cố định ở `~/.local/share/nasani-mcp/runtime/` và thêm MCP, skill, agent cho dự án hiện tại. Config không trỏ vào cache `npx`; dọn cache vẫn dùng được MCP. Không cần clone repo thủ công, export biến, copy file hay chạy server riêng. Chạy lệnh này tại mỗi dự án muốn dùng; không thay trust/approval hay cấu hình global của AI client.
+
+Không dùng menu thì chỉ định sẵn:
+
+```sh
+npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client both
+```
+
+Thay `both` bằng `codex` hoặc `claude`; thêm `--mcp-only` nếu chỉ muốn MCP. Có thể dùng `--project /duong-dan-tuyet-doi/du-an` thay cho thư mục hiện tại. Chạy lại giữ nguyên config phù hợp; nếu NASANI/skill đã tùy chỉnh thì báo xung đột, không tự ghi đè. Các dự án dùng chung runtime local này. Đường cài thủ công bên dưới vẫn dùng được.
+
+Sau cài, mở lại đúng dự án trong Codex/Claude, chấp thuận MCP/trust khi được hỏi, rồi gửi `Gọi nasani_environment`. Kiểm tra `mode: local` và `project_root` đúng dự án. Kết nối Figma MCP bằng tài khoản riêng của từng người nếu chưa có; installer NASANI không tự đăng nhập Figma.
+
 ## Dùng ngay trong phiên AI coding
 
 Luồng mặc định là **MCP local**, cài vào Codex/Claude đang dùng. AI của phiên hiện tại đọc dữ liệu từ Figma MCP, phân tích và ghi code trực tiếp vào dự án bằng file tools của client. NASANI cung cấp workflow và engine xử lý; không tạo ZIP trừ khi người dùng yêu cầu.

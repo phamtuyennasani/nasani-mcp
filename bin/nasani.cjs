@@ -9,6 +9,7 @@ const HELP = `NASANI MCP — standalone design-to-code tooling (Node >=22)
 
   nasani-mcp local   --project /absolute/project
   nasani-mcp bridge  --project /absolute/project --url https://domain/mcp [--token-file /private/token]
+  nasani-mcp setup   [--client codex|claude|both] [--project /absolute/project] [--mcp-only]
   nasani-mcp install --client codex|claude --project /absolute/project [--mcp-only] [--mode local|bridge] [--url URL] [--token-file FILE]
   nasani-mcp serve   [--access-file FILE] [--url URL] [--host ADDRESS] [--port PORT]
   nasani-mcp keygen  --access-file FILE --member MEMBER
@@ -20,6 +21,7 @@ Install --mcp-only: register MCP only; nasani_workflow serves the bundled instru
 Optional remote server env: NASANI_ACCESS_FILE, NASANI_PUBLIC_URL, NASANI_HOST (127.0.0.1), PORT (8787), NASANI_CONCURRENCY (2).
 Bridge credential: NASANI_TOKEN, or NASANI_TOKEN_FILE, or ~/.config/nasani/token.
 Figma is authenticated separately through the official Figma MCP in your AI host.
+Setup: choose a client interactively, install a persistent local runtime, and configure the current project.
 `;
 function parse(argv) {
     const [command, ...flags] = argv;
@@ -39,11 +41,14 @@ async function main() {
     const allowed = {
         local: ['project'], bridge: ['project', 'url', 'token-file'],
         serve: ['access-file', 'url', 'host', 'port'], keygen: ['access-file', 'member'], revoke: ['access-file', 'member'],
-        install: ['client', 'project', 'mode', 'url', 'token-file', 'mcp-only'], token: ['token-file']
+        install: ['client', 'project', 'mode', 'url', 'token-file', 'mcp-only'],
+        setup: ['client', 'project', 'mcp-only'], token: ['token-file']
     };
     if (!allowed[command]) throw new Error('Unknown command; use --help.');
     for (const key of Object.keys(o)) if (!allowed[command].includes(key.slice(2))) throw new Error(`Unsupported ${key} for ${command}.`);
-    if (['local', 'bridge'].includes(command)) {
+    if (command === 'setup') {
+        await require('../lib/setup.cjs').setup({ project: o['--project'] || process.cwd(), client: o['--client'], mcpOnly: Boolean(o['--mcp-only']) });
+    } else if (['local', 'bridge'].includes(command)) {
         const { projectRoot } = require('../lib/project.cjs');
         const root = projectRoot(o['--project']);
         let remote;

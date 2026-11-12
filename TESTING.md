@@ -12,6 +12,12 @@ npm pack --dry-run
 
 Một integration test dùng MCP SDK client thật, chạy qua STDIO, Streamable HTTP và local-to-remote bridge. Các nhánh kiểm tra gồm workflow, source validation/format, assets, Swiper, token/revoke, containment/symlink/hardlink, giới hạn bundle, lỗi mạng, sửa source đồng thời, rollback và installer không ghi đè cấu hình tùy biến. Test đã qua. Skill cũng đã qua `quick_validate.py` của skill-creator; npm pack dry run không chứa token, `.env`, `node_modules` hay demo khách hàng.
 
+## Cài nhanh
+
+Lệnh `setup` có menu chọn Codex, Claude Code hoặc cả hai; dùng thư mục hiện tại khi không truyền `--project`. Đã thử menu thực tế qua `npx` với gói `.tgz` trong Terminal, chọn `3` rồi Enter để cài cả hai vào dự án có dấu cách trong đường dẫn.
+
+Test `test/setup.test.cjs` chạy với home/dự án tạm, cài cả hai client, giữ config không liên quan, chạy lại không đổi config, và từ chối xung đột ở Claude trước khi tạo config Codex. Test xóa bản tải tạm rồi dùng cấu hình đã cài khởi động MCP STDIO và gọi `nasani_environment` thành công. Runtime là bản copy cố định, không phải symlink tới cache tải xuống. Chưa kiểm thử cài nhanh trên Windows/Linux; trust MCP và OAuth Figma vẫn do người dùng thực hiện trong client.
+
 ## Dữ liệu Figma thật
 
 Trong phiên Codex đang làm việc, Figma MCP chính thức đã đọc thành công một frame Petshop **1920 × 7490 px** do người dùng cung cấp. AI của phiên đọc context/screenshot, lấy assets và ghi trực tiếp `petshop/index.html`, `petshop/style.css`, `petshop/assets/` vào một dự án demo riêng. Không tạo ZIP. File Figma, ảnh khách hàng và bản demo không được đưa vào repository này.
