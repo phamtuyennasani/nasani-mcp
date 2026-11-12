@@ -18,6 +18,19 @@ Lệnh `setup` có menu chọn Codex, Claude Code hoặc cả hai; dùng thư m�
 
 Test `test/setup.test.cjs` chạy với home/dự án tạm, cài cả hai client, giữ config không liên quan, chạy lại không đổi config, và từ chối xung đột ở Claude trước khi tạo config Codex. Test xóa bản tải tạm rồi dùng cấu hình đã cài khởi động MCP STDIO và gọi `nasani_environment` thành công. Runtime là bản copy cố định, không phải symlink tới cache tải xuống. Chưa kiểm thử cài nhanh trên Windows/Linux; trust MCP và OAuth Figma vẫn do người dùng thực hiện trong client.
 
+## Cài skill qua skills CLI
+
+Đã thử `skills` **1.8.1** với repo GitHub công khai:
+
+```sh
+npx skills add phamtuyennasani/nasani-mcp --list
+npx skills add phamtuyennasani/nasani-mcp -g --agent codex claude-code --yes
+```
+
+Lệnh đầu nhận diện đúng một skill `nasani-figma`. Lệnh cài global được chạy với `HOME`, `CODEX_HOME`, `CLAUDE_CONFIG_DIR` và `XDG_CONFIG_HOME` trỏ tới thư mục tạm, không thay skill/config thật của người dùng. Assert xác nhận `SKILL.md` và `references/standalone.md` có đủ tại `~/.agents/skills/nasani-figma/`, Claude có symlink tới cùng skill, và nội dung khớp source repo.
+
+Assert cũng xác nhận không có runtime NASANI, MCP config hay agent được tạo bởi `skills add`. Đây là bước cài skill, không phải kiểm thử kết nối MCP; muốn có tool phải chạy `setup --mcp-only` trong từng dự án hoặc đã có MCP tương ứng. Bản thân CLI khi chạy trong phiên Codex có thể tự phát hiện Codex và bỏ menu; `--agent codex claude-code` chỉ định rõ cả hai client.
+
 ## Dữ liệu Figma thật
 
 Trong phiên Codex đang làm việc, Figma MCP chính thức đã đọc thành công một frame Petshop **1920 × 7490 px** do người dùng cung cấp. AI của phiên đọc context/screenshot, lấy assets và ghi trực tiếp `petshop/index.html`, `petshop/style.css`, `petshop/assets/` vào một dự án demo riêng. Không tạo ZIP. File Figma, ảnh khách hàng và bản demo không được đưa vào repository này.

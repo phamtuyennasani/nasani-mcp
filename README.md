@@ -2,7 +2,37 @@
 
 Project Node độc lập cho luồng **Figma → code trong dự án → kiểm tra/format bằng NASANI**. Chứa bản riêng của engine HTML/CSS, SVG và Swiper hiện có; không cần Laravel, PHP, database hoặc thư mục `tools123`.
 
-## Cài nhanh bằng một lệnh
+## Cài skill giống Hallmark
+
+```sh
+npx skills add phamtuyennasani/nasani-mcp -g
+```
+
+Lệnh phát hiện skill `nasani-figma` ngay từ repo này; không cần publish npm. `-g` cài skill ở phạm vi người dùng để dùng cho nhiều dự án. CLI `skills` hiện yêu cầu Node.js >=22.20 và Git. Chạy trong Terminal để chọn client theo menu; khi chạy bên trong một AI coding agent, CLI có thể tự chọn agent đó. Muốn cài rõ cho **cả Codex và Claude Code**, dùng:
+
+```sh
+npx skills add phamtuyennasani/nasani-mcp -g --agent codex claude-code --yes
+```
+
+Chỉ dùng một client thì giữ `codex` hoặc `claude-code` trong `--agent`. Lệnh này cài **skill và tài liệu kèm theo**, không đăng ký MCP, cài runtime NASANI, agent chuyên trách hay đăng nhập Figma. Nếu NASANI MCP đã kết nối đúng dự án thì dùng ngay. Nếu chưa, mở Terminal tại dự án cần triển khai và chạy một lần:
+
+```sh
+npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client both --mcp-only
+```
+
+Thay `both` bằng `codex` hoặc `claude` nếu chỉ dùng một client. Lưu ý tên Claude của `skills` là `claude-code`, còn installer NASANI dùng `claude`. MCP được đăng ký riêng cho từng dự án để giữ đúng thư mục được phép xử lý; skill global không tự mở quyền cho các dự án khác. Mở phiên mới/reload MCP, chấp thuận trust/MCP khi client yêu cầu, kết nối Figma MCP rồi gửi:
+
+> Dùng skill nasani-figma triển khai frame [link Figma] vào [route/component] trong dự án đang mở. Kiểm tra nasani_environment và ghi code trực tiếp vào source.
+
+Cập nhật riêng skill đã cài global:
+
+```sh
+npx skills update nasani-figma -g
+```
+
+Lệnh cập nhật skill không cập nhật runtime MCP. Xem [CLI skills chính thức](https://github.com/vercel-labs/skills/blob/main/docs/commands.md) về lựa chọn client, phạm vi cài và cập nhật.
+
+## Cài trọn MCP, skill và agent bằng một lệnh
 
 Mở Terminal **tại thư mục dự án cần triển khai**, rồi chạy (cần Git và Node.js >=22):
 

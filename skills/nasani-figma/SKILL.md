@@ -9,6 +9,18 @@ Use the active Codex/Claude coding session to analyze Figma and write code direc
 
 When only the MCP is installed, `nasani_workflow` returns these instructions and the standalone contract when relevant; a separate skill or agent is not required. The host model performs the analysis and generation. NASANI neither calls another installed plugin nor starts a second AI agent by itself.
 
+## Check the installation
+
+This skill can be installed globally with `npx skills add phamtuyennasani/nasani-mcp -g`. That installs instructions and references, not the NASANI MCP runtime, client configuration or a dedicated agent. Do not treat skill discovery as proof that its tools are connected.
+
+If NASANI tools are unavailable, explain the missing connection and provide this command to run from the target project's directory (Git and Node.js >=22 are required):
+
+```sh
+npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client both --mcp-only
+```
+
+Use `codex` or `claude` instead of `both` for one client. Run setup only when the user requests installation; merely loading this skill does not authorize configuration changes. Reload/reopen the client, complete its project trust/MCP approval, then verify `nasani_environment` and its project root. Figma MCP is connected separately with the developer's own account. Never claim NASANI validation/formatting ran when its tools are absent.
+
 ## Choose the output mode
 
 - **Existing application:** inspect its instructions, framework, components, tokens, routes and checks. Implement in its native structure. Reuse existing components and interactions. NASANI's strict validator is not a general-purpose JSX/Vue/PHP validator; use it only for an explicitly useful isolated static export, then run the application's own checks on the integration.
