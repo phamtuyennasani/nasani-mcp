@@ -98,6 +98,15 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.notDeepEqual(formatted, before);
     assert.equal((await call(client, 'nasani_format', args)).data.ok, true);
     assert.deepEqual(readSources(output), formatted);
+    const accessible = formatted.html.replace('class="hero-layout"', 'class="hero-layout" role="region" aria-labelledby="hero-title"')
+        .replace('class="hero__title"', 'class="hero__title" id="hero-title" tabindex="-1" aria-label="NASANI title"');
+    fs.writeFileSync(path.join(output, 'index.html'), accessible);
+    assert.equal((await call(client, 'nasani_format', args)).data.ok, true);
+    const accessibleOutput = readSources(output).html;
+    for (const attribute of ['role="region"', 'aria-labelledby="hero-title"', 'id="hero-title"', 'tabindex="-1"', 'aria-label="NASANI title"']) {
+        assert.ok(accessibleOutput.includes(attribute), `format must preserve ${attribute}`);
+    }
+    fs.writeFileSync(path.join(output, 'index.html'), formatted.html);
     const changed = { ...formatted, css: `${formatted.css}\n/* user edit */` };
     fs.writeFileSync(path.join(output, 'style.css'), changed.css);
     assert.throws(() => replaceSources(output, formatted, before), /Source changed/);

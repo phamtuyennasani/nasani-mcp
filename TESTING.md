@@ -55,6 +55,16 @@ Các lỗi dữ liệu thật đã gặp và xử lý trong demo:
 
 ## Client thật
 
+### Lượt Hannie — 12/11/2026
+
+Đã đọc frame Hannie **1920 × 1080 px** bằng Figma MCP chính thức trong phiên Codex: tạo session theo yêu cầu của tool, gọi `get_design_context` trực tiếp rồi tải asset. Không gọi whoami/health/auth preflight. AI của phiên ghi `index.html`, `style.css` và asset local vào một dự án demo riêng; MCP SDK client thật khởi động NASANI từ source repo qua STDIO và gọi environment/format. Lượt format cuối trả `ok: true`, `formatted: true`, `errors: []`; không tạo ZIP.
+
+Kiểm thử này phát hiện formatter xóa `id`, `aria-*`, `role` và `tabindex` đã được validator chấp nhận. Đã bỏ bước xóa thuộc tính; integration test xác nhận các thuộc tính và liên kết `aria-labelledby` được giữ sau `nasani_format`. Test hồi quy thất bại trước sửa và qua sau sửa; `npm test` qua **2/2**. Không nới allowlist của validator.
+
+Chrome được kiểm tra qua browser extension ở **320, 390, 768, 1024, 1025, 1050, 1100, 1230, 1280, 1920 px**. Sau sửa CSS demo, không cuộn ngang, không vùng nội dung được đo vượt mép trang, không tràn nội bộ tại các nhóm text/gallery/card được kiểm tra, không ảnh lỗi và không link thiếu tên truy cập. Font local tải đủ; console không ghi warning/error trong lượt quan sát. Đã lưu JSON đo đạc và ảnh desktop/mobile cùng demo, so sánh trực quan với screenshot Figma. Không dùng ảnh toàn frame thay cho HTML.
+
+Đây là kiểm thử Codex + Figma chính thức + NASANI STDIO, chưa phải một lượt Claude độc lập với frame này. Menu/search/CTA là giao diện static, chưa có nội dung đích hoặc backend; frame không có carousel nên không kiểm thử Swiper bằng dữ liệu Hannie. Không tuyên bố pixel-perfect. Demo và artwork khách hàng không đưa vào repo.
+
 | Client | Kết quả đã quan sát |
 | --- | --- |
 | Codex CLI | Gọi được environment/workflow và chạy thành công validate → format → validate lại → assets qua MCP STDIO. Lượt đầu bị chính sách approval `never` chặn format; lượt cuối đặt quyền cho đúng `nasani_format` trong cấu hình riêng của invocation rồi cả bốn tool đều trả `ok: true`. |
