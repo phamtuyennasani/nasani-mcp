@@ -9,17 +9,27 @@ Use the active Codex/Claude coding session to analyze Figma and write code direc
 
 When only the MCP is installed, `nasani_workflow` returns these instructions and the standalone contract when relevant; a separate skill or agent is not required. The host model performs the analysis and generation. NASANI neither calls another installed plugin nor starts a second AI agent by itself.
 
-## Check the installation
+## Start NASANI in this session
 
-This skill can be installed globally with `npx skills add phamtuyennasani/nasani-mcp -g`. That installs instructions and references, not the NASANI MCP runtime, client configuration or a dedicated agent. Do not treat skill discovery as proof that its tools are connected.
+`npx skills add phamtuyennasani/nasani-mcp -g` installs this skill and its executable helper. The skills installer itself does not run MCP setup. When the user asks to use NASANI and native `nasani_*` tools are missing, **run the bundled helper instead of stopping with a missing-runtime message**. Explain that first use installs NASANI's local runtime and registers its project MCP. Honor the host's shell approvals; do not run setup merely because the skill was loaded for an unrelated task.
 
-If NASANI tools are unavailable, explain the missing connection and provide this command to run from the target project's directory (Git and Node.js >=22 are required):
+Resolve the actual directory containing this `SKILL.md`; do not assume a username, global install location or current working directory. From the target project, run (substitute the real absolute paths):
 
 ```sh
-npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client both --mcp-only
+node "/absolute/path/to/nasani-figma/scripts/nasani.cjs" --project "/absolute/target-project" --client codex nasani_environment </dev/null
 ```
 
-Use `codex` or `claude` instead of `both` for one client. Run setup only when the user requests installation; merely loading this skill does not authorize configuration changes. Reload/reopen the client, complete its project trust/MCP approval, then verify `nasani_environment` and its project root. Figma MCP is connected separately with the developer's own account. Never claim NASANI validation/formatting ran when its tools are absent.
+Use `--client claude` in Claude Code. Git and Node.js >=22 are required. The helper installs a persistent runtime under `~/.local/share/nasani-mcp/runtime/`, preserves unrelated config, and calls the real MCP server over STDIO. Verify `mode: local` and `project_root` in the JSON result. Installation conflicts or missing dependencies must be reported with their actual error; do not overwrite custom config.
+
+New native MCP tools may need a client reload. **Continue the current task through the helper** until they are available: pass the same tool name and a JSON argument object on stdin. For example:
+
+```sh
+node "/absolute/path/to/nasani-figma/scripts/nasani.cjs" --project "/absolute/target-project" --client codex nasani_validate <<'JSON'
+{"directory":".nasani/hero","content_width":1200}
+JSON
+```
+
+Supported tools are `nasani_environment`, `nasani_workflow`, `nasani_validate`, `nasani_format`, `nasani_assets`, and `nasani_swiper_scripts`. Use their actual schemas, project-relative directories and design-derived widths. The helper returns the MCP response, including `isError`; a nonzero exit is a failed operation. It does not simulate validation or make native tools appear in a running client. Prefer native tools once connected. Do not use the helper to bypass an explicit tool denial, change trust/approval settings, or replace an existing bridge/remote configuration. Figma MCP still connects separately with the developer's own account.
 
 ## Choose the output mode
 

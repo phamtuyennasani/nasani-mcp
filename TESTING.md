@@ -29,7 +29,11 @@ npx skills add phamtuyennasani/nasani-mcp -g --agent codex claude-code --yes
 
 Lệnh đầu nhận diện đúng một skill `nasani-figma`. Lệnh cài global được chạy với `HOME`, `CODEX_HOME`, `CLAUDE_CONFIG_DIR` và `XDG_CONFIG_HOME` trỏ tới thư mục tạm, không thay skill/config thật của người dùng. Assert xác nhận `SKILL.md` và `references/standalone.md` có đủ tại `~/.agents/skills/nasani-figma/`, Claude có symlink tới cùng skill, và nội dung khớp source repo.
 
-Assert cũng xác nhận không có runtime NASANI, MCP config hay agent được tạo bởi `skills add`. Đây là bước cài skill, không phải kiểm thử kết nối MCP; muốn có tool phải chạy `setup --mcp-only` trong từng dự án hoặc đã có MCP tương ứng. Bản thân CLI khi chạy trong phiên Codex có thể tự phát hiện Codex và bỏ menu; `--agent codex claude-code` chỉ định rõ cả hai client.
+Assert cũng xác nhận không có runtime NASANI, MCP config hay agent được tạo ngay bởi `skills add`. Bản thân CLI khi chạy trong phiên Codex có thể tự phát hiện Codex và bỏ menu; `--agent codex claude-code` chỉ định rõ cả hai client.
+
+Skill có thêm helper `scripts/nasani.cjs` cho lần dùng đầu khi chưa có tool native. Helper gọi installer và dùng MCP SDK client thật qua STDIO, không gọi engine thay cho MCP. Test `test/setup.test.cjs` kiểm tra helper đăng ký MCP vào một dự án sạch, gọi environment đúng root, format rồi validate source thật, chạy lại giữ config, trả lỗi khi thoát root, và giữ nguyên cấu hình NASANI tùy chỉnh. Tên tool không hợp lệ/JSON không phải object bị chặn trước khi ghi config. Helper không làm tool native xuất hiện trong phiên client đang chạy; các kiểm tra trên dùng shell helper cho đến khi client nạp lại MCP.
+
+Đã chạy riêng helper với home hoàn toàn mới, chưa có runtime, dùng đường dẫn dự án có dấu cách. Helper tải NASANI từ GitHub, tạo runtime cố định và project config Codex, rồi `nasani_environment` trả `ok: true`, `mode: local` và đúng project root ngay trong cùng invocation. Không ghi config Codex global hoặc config Claude ngoài lựa chọn. Đây là kiểm thử helper/installer/MCP, không phải bằng chứng mọi model sẽ tự thực thi đúng hướng dẫn skill hay mọi client sẽ tự nạp lại tool.
 
 ## Dữ liệu Figma thật
 
