@@ -49,7 +49,6 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     const listed = await client.listTools();
     assert.equal(listed.tools.length, 6);
     assert.equal(listed.tools.find(item => item.name === 'nasani_format').annotations.readOnlyHint, false);
-    assert.equal((await call(client, 'nasani_environment')).data.project_root, project);
     const workflowArgs = { design_url: 'https://www.figma.com/design/example/File?node-id=1-2', target: 'src/pages/Home' };
     const workflow = await call(client, 'nasani_workflow', workflowArgs);
     assert.equal(workflow.data.ok, true);
@@ -62,9 +61,9 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.deepEqual(workflow.data.figma_handoff, {
         skill: 'figma-design-to-code',
         primary_tool: 'get_design_context',
-        action: 'Call the host Figma MCP get_design_context for the supplied node before writing code.',
+        action: 'Use the installed Figma design-to-code skill if available, then call the host Figma MCP get_design_context for the supplied node. A missing skill does not block the tool call.',
         preflight: 'Do not call nasani_environment, probe Figma connectivity, or ask for credentials before this Figma call.',
-        on_error: 'Stop and report the exact Figma MCP error. Do not retry with another account, token, or NASANI client secret.'
+        on_error: 'Report the actual missing-tool or Figma error. Stop on connection/authentication/file-access failures; follow Figma guidance for size/timeout/argument recovery. Do not probe connectivity or change credentials.'
     });
     assert.match(workflow.data.next, /get_design_context first/);
     const withContext = await call(client, 'nasani_workflow', { ...workflowArgs, output_mode: 'standalone', figma_context: 'Figma MCP: frame width 1440, wrapper max-width 1200.' });
@@ -74,6 +73,7 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, design_url: 'https://figma.com.evil.invalid/design/123' })).isError, true);
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, figma_context: 'x'.repeat(16001) })).isError, true);
     const args = { directory: 'output', content_width: 1200 };
+    assert.equal((await call(client, 'nasani_environment')).data.project_root, project);
     const before = readSources(output);
     assert.equal((await call(client, 'nasani_validate', args)).data.ok, true);
     assert.equal((await call(client, 'nasani_swiper_scripts', { directory: 'output', swipers: [] })).data.ok, true);

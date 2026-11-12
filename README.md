@@ -16,7 +16,7 @@ npx skills add phamtuyennasani/nasani-mcp -g --agent codex claude-code --yes
 
 Chỉ dùng một client thì giữ `codex` hoặc `claude-code` trong `--agent`. Lệnh này cài **skill, tài liệu và helper**, chưa chạy installer MCP hay đăng nhập Figma. Mở dự án trong AI client và yêu cầu:
 
-> Dùng skill nasani-figma triển khai frame [link Figma] vào [route/component] trong dự án đang mở. Gọi skill figma-design-to-code và get_design_context trực tiếp; nếu Figma trả lỗi thì báo nguyên văn lỗi. Chỉ dùng NASANI runner khi đã có output cần kiểm tra.
+> Dùng skill nasani-figma triển khai frame [link Figma] vào [route/component] trong dự án đang mở. Nếu có skill figma-design-to-code thì dùng nó; nếu không, gọi get_design_context trực tiếp. Nếu Figma trả lỗi thì báo lỗi thực tế. Chỉ dùng NASANI runner khi đã có output cần kiểm tra.
 
 Ở lần dùng đầu, skill hướng dẫn AI chạy helper `scripts/nasani.cjs`: tự tải runtime cố định, đăng ký MCP cho đúng dự án và gọi MCP thật qua STDIO. Nếu client chưa nạp tool mới, helper tiếp tục gọi validate/format/assets ngay trong phiên hiện tại; tên tool native `nasani_*` chỉ xuất hiện sau khi client nạp lại MCP. AI cần quyền chạy shell; trust/approval vẫn theo chính sách client. Kết nối Figma MCP riêng bằng tài khoản của bạn.
 
@@ -72,7 +72,7 @@ Luồng mặc định là **MCP local**, cài vào Codex/Claude đang dùng. AI 
 
 ```text
 Bạn gửi link Figma trong Codex/Claude
-  → AI gọi figma-design-to-code + get_design_context trực tiếp
+  → AI dùng skill Figma nếu có, gọi get_design_context trực tiếp
   → NASANI nhận context và hướng dẫn triển khai, không probe Figma
   → AI của phiên hiện tại phân tích và ghi code vào dự án
   → NASANI kiểm tra/format output phù hợp, AI render và sửa tiếp
@@ -98,7 +98,7 @@ Sau khi cài:
 
 1. **Codex:** mở đúng dự án và đánh dấu dự án đó là trusted qua client, rồi mở phiên mới/reload MCP. Codex có thể bỏ qua `.codex/config.toml` của dự án chưa trusted; trust thư mục cha hoặc chỉ mở lại chưa chắc đủ. Installer không tự thay cấu hình trust global. Khi format, chấp thuận `nasani_format` nếu client yêu cầu quyền ghi.
 2. **Claude Code:** mở phiên trong dự án, chấp thuận project MCP từ `.mcp.json`, dùng `/mcp` kiểm tra NASANI đã kết nối. Chấp thuận quyền gọi tool format khi được hỏi.
-3. Yêu cầu AI gọi `nasani_environment`. `mode` phải là `local`, `project_root` phải đúng thư mục dự án đích. Nếu sai root, sửa cấu hình/cài lại trước khi sửa source.
+3. Khi cần dùng NASANI runner, yêu cầu AI gọi `nasani_environment`. `mode` phải là `local`, `project_root` phải đúng thư mục dự án đích. Nếu sai root, sửa cấu hình/cài lại trước khi dùng runner.
 4. Kết nối **Figma MCP chính thức** trong cùng client bằng tài khoản Figma của từng người. Nếu đã có plugin Figma đang hoạt động thì dùng luôn, không thêm entry trùng.
 
 Nếu chưa cài Figma, ưu tiên plugin Figma chính thức của client. Cách đăng ký server thủ công:
@@ -116,9 +116,9 @@ claude mcp add --transport http figma https://mcp.figma.com/mcp
 
 Sau khi client thấy các tool NASANI và Figma, yêu cầu:
 
-> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Gọi skill figma-design-to-code và get_design_context trực tiếp, không chạy Figma health check. Nếu Figma lỗi thì báo nguyên văn lỗi; nếu thành công, ghi code trực tiếp vào source rồi chỉ dùng NASANI runner cho output cần kiểm tra.
+> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Nếu có skill figma-design-to-code thì dùng nó; nếu không, gọi get_design_context trực tiếp, không chạy Figma health check. Nếu Figma lỗi thì báo lỗi thực tế; nếu thành công, ghi code trực tiếp vào source rồi chỉ dùng NASANI runner cho output cần kiểm tra.
 
-`nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Kết quả có `figma_handoff` yêu cầu host gọi `figma-design-to-code`/`get_design_context` trực tiếp. Tool này không probe Figma, không tự suy luận và không âm thầm gọi lại AI. Nếu lời gọi Figma lỗi, host báo đúng lỗi đó. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
+`nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Kết quả có `figma_handoff` yêu cầu host dùng skill Figma chính thức nếu có, hoặc gọi `get_design_context` trực tiếp; context đã cung cấp được tái sử dụng và chỉ phần thiếu mới được đọc thêm. Tool này không probe Figma, không tự suy luận và không âm thầm gọi lại AI. Nếu tool không có hoặc lời gọi Figma lỗi, host báo lỗi thực tế. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
 
 Với output standalone, sau khi tạo đủ source/assets, gọi `nasani_format` để kiểm tra asset, validate trước/sau và format trong một lượt. Không cần chuỗi mặc định `validate → assets → format → validate` trên cùng đầu ra không đổi. Dùng `nasani_validate` cho audit chỉ đọc/chẩn đoán lỗi hoặc sau khi sửa tiếp; dùng `nasani_assets` khi cần danh sách asset/chẩn đoán. Kiểm tra build/lint/type phù hợp và so sánh browser vẫn thực hiện sau triển khai.
 
@@ -160,7 +160,7 @@ Dùng Claude Code thì thay `codex` bằng `claude`. Lệnh `install` cài MCP c
 
 Installer giữ cấu hình không liên quan, chạy lại cùng cấu hình sẽ không ghi thêm. Nếu đã có entry NASANI khác hoặc skill/agent đã tùy biến, nó báo xung đột để bạn sửa rõ ràng; không tự ghi đè. Cấu hình dùng đường dẫn tuyệt đối tới Node và CLI của bản NASANI này: nếu di chuyển NASANI hoặc thay Node, cập nhật entry đó trước khi cài lại. Chỉ chạy installer sau khi đã đặt NASANI ở vị trí ổn định.
 
-Mở lại dự án trong AI client, chấp thuận MCP theo giao diện client nếu được hỏi, rồi kiểm tra `nasani_environment`. Agent dùng tên `nasani_figma` trong Codex hoặc `nasani-figma` trong Claude. Ví dụ yêu cầu:
+Mở lại dự án trong AI client, chấp thuận MCP theo giao diện client nếu được hỏi. Chỉ kiểm tra `nasani_environment` khi tác vụ cần NASANI runner. Agent dùng tên `nasani_figma` trong Codex hoặc `nasani-figma` trong Claude. Ví dụ yêu cầu:
 
 > Dùng skill nasani-figma để triển khai frame Figma tôi gửi vào route hiện tại. Đọc cấu trúc dự án, dùng Figma MCP lấy context và assets, triển khai rồi chạy các kiểm tra phù hợp.
 
