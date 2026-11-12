@@ -1,0 +1,10 @@
+{$NASANI_DOMAIN} {
+    request_body {
+        max_size 112MB
+    }
+    reverse_proxy nasani:8787 {
+        transport http {
+            response_header_timeout 70s
+        }
+    }
+}

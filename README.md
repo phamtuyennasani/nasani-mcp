@@ -1,0 +1,109 @@
+# NASANI MCP
+
+Project Node độc lập cho luồng **Figma → code trong dự án → kiểm tra/format bằng NASANI**. Chứa bản riêng của engine HTML/CSS, SVG và Swiper hiện có; không cần Laravel, PHP, database hoặc thư mục `tools123`.
+
+## Dùng ngay trong phiên AI coding
+
+Luồng mặc định là **MCP local**, cài vào Codex/Claude đang dùng. AI của phiên hiện tại đọc dữ liệu từ Figma MCP, phân tích và ghi code trực tiếp vào dự án bằng file tools của client. NASANI cung cấp workflow và engine xử lý; không tạo ZIP trừ khi người dùng yêu cầu.
+
+```text
+Bạn gửi link Figma trong Codex/Claude
+  → AI gọi Figma MCP để lấy context, screenshot, assets
+  → AI gọi nasani_workflow để lấy quy tắc NASANI
+  → AI của phiên hiện tại phân tích và ghi code vào dự án
+  → NASANI kiểm tra/format output phù hợp, AI render và sửa tiếp
+```
+
+Không cần URL server NASANI, token NASANI, trang web cấu hình hoặc API key AI riêng. NASANI không đọc token đăng nhập Codex/Claude: phần suy luận diễn ra trong client theo quyền sử dụng của phiên đang mở. Bạn vẫn phải kết nối Figma MCP bằng tài khoản Figma của mình và cho AI client quyền sửa dự án.
+
+Cài **chỉ MCP** (Node.js >=22), chạy trong thư mục project NASANI:
+
+```sh
+npm ci --ignore-scripts
+node bin/nasani.cjs install --client codex --project /duong-dan-tuyet-doi/du-an-cua-ban --mcp-only
+```
+
+Claude Code dùng `--client claude`. Không cần chép skill/agent khi dùng `--mcp-only`: tool `nasani_workflow` trả hướng dẫn được đóng gói trong MCP. Vẫn cần đăng ký MCP local một lần để client biết lệnh khởi động và dự án được phép xử lý. Mở lại/reload MCP trong client sau khi cài; không giả định server mới tự xuất hiện ngay trong phiên đã khởi động.
+
+Sau khi client thấy các tool NASANI và Figma, yêu cầu:
+
+> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Lấy workflow bằng nasani_workflow, đọc Figma MCP, phân tích bằng phiên AI hiện tại, ghi trực tiếp vào source rồi kiểm tra giao diện.
+
+`nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Tool này trả hướng dẫn, không tự suy luận hay âm thầm gọi lại AI. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
+
+## Chọn cách chạy
+
+| Cách chạy | Code nằm ở đâu? | Engine chạy ở đâu? | Cần host? |
+| --- | --- | --- | --- |
+| `local` | Máy developer | Máy developer, không gửi mạng | Không |
+| `bridge` | Máy developer | Host NASANI; nhận bundle của một output | Có |
+| HTTP trực tiếp | AI client tự gửi/nhận bundle | Host NASANI | Có |
+
+**Local là mặc định cho luồng trên.** Bridge/HTTP chỉ cần khi bạn chủ động chọn chạy engine trên host riêng; hướng dẫn đã tách vào `deploy/README.md`. Server từ xa không đọc được đường dẫn trên máy thành viên. Bridge gửi hai source và assets được tham chiếu rồi nhận kết quả; chỉ ghi lại hai source khi chúng chưa bị sửa trong lúc chờ.
+
+```mermaid
+flowchart LR
+    AI[AI trong phiên Codex / Claude Code] --> F[Figma MCP chính thức]
+    F --> U[Tài khoản Figma riêng của mỗi người]
+    AI --> N[NASANI MCP local: workflow / engine]
+    AI -->|File tools: ghi trực tiếp| P[Source trong dự án đang mở]
+    N -->|Kiểm tra / format standalone output| P
+```
+
+AI host điều phối Figma MCP và NASANI. Mỗi người kết nối Figma MCP chính thức bằng tài khoản của họ. Luồng local không cần `FIGMA_CLIENT_ID` hay `FIGMA_CLIENT_SECRET`; quyền truy cập file và hạn mức Figma vẫn do Figma quyết định.
+
+## Skill và agent cài kèm — tùy chọn
+
+Nếu muốn skill được client phát hiện riêng và có agent chuyên trách, bỏ `--mcp-only`:
+
+```sh
+node bin/nasani.cjs install --client codex --project /duong-dan-tuyet-doi/du-an-cua-ban
+```
+
+Dùng Claude Code thì thay `codex` bằng `claude`. Lệnh `install` cài MCP config, skill và agent vào **dự án đích**, không thay cấu hình global:
+
+| Client | MCP config | Skill | Agent |
+| --- | --- | --- | --- |
+| Codex | `.codex/config.toml` | `.agents/skills/nasani-figma/` | `.codex/agents/nasani-figma.toml` |
+| Claude Code | `.mcp.json` | `.claude/skills/nasani-figma/` | `.claude/agents/nasani-figma.md` |
+
+Installer giữ cấu hình không liên quan, chạy lại cùng cấu hình sẽ không ghi thêm. Nếu đã có entry NASANI khác hoặc skill/agent đã tùy biến, nó báo xung đột để bạn sửa rõ ràng; không tự ghi đè. Cấu hình dùng đường dẫn tuyệt đối tới Node và CLI của bản NASANI này: nếu di chuyển NASANI hoặc thay Node, cập nhật entry đó trước khi cài lại. Chỉ chạy installer sau khi đã đặt NASANI ở vị trí ổn định.
+
+Mở lại dự án trong AI client, chấp thuận MCP theo giao diện client nếu được hỏi, rồi kiểm tra `nasani_environment`. Agent dùng tên `nasani_figma` trong Codex hoặc `nasani-figma` trong Claude. Ví dụ yêu cầu:
+
+> Dùng skill nasani-figma để triển khai frame Figma tôi gửi vào route hiện tại. Đọc cấu trúc dự án, dùng Figma MCP lấy context và assets, triển khai rồi chạy các kiểm tra phù hợp.
+
+Skill chọn cấu trúc/framework của dự án hiện có. Validator NASANI chỉ dành cho output standalone `index.html` + `style.css`; không áp đặt cấu trúc static lên React/Vue/Laravel.
+
+## Tool contract
+
+| Tool | Input local / bridge | Input HTTP trực tiếp | Kết quả |
+| --- | --- | --- | --- |
+| `nasani_workflow` | `design_url`, `target`, `output_mode?`, `figma_context?` | Như local | Hướng dẫn làm trực tiếp trong phiên; contract standalone khi cần |
+| `nasani_environment` | `{}` | `{}` | Dependencies và mode |
+| `nasani_validate` | `directory`, `content_width`, options | `bundle`, `content_width`, options | Lỗi AST/policy |
+| `nasani_format` | Như validate | Như validate | Local/bridge ghi 2 source; remote trả `source` |
+| `nasani_assets` | `directory` | `bundle` | Assets đang được tham chiếu; không xóa |
+| `nasani_swiper_scripts` | `directory`, `swipers` | `bundle`, `swipers` | Helper/app source và dependencies; không chạy JS |
+
+`nasani_workflow.output_mode` mặc định `application`, hoặc `standalone`; `figma_context` là tóm tắt tùy chọn, tối đa 16.000 ký tự, không gửi token. Workflow không cần truy cập mạng và không ghi file. AI dùng file tools sẵn có để tạo/sửa source; `nasani_format` trực tiếp sửa hai file standalone.
+
+`directory` là đường dẫn tương đối trong `--project`. Bundle là `{html, css, assets: [{path: "assets/icon.svg", base64: "…"}]}`. Options validate/format: `require_responsive_breakpoints`, `swipers`. Đọc contract chi tiết tại `skills/nasani-figma/references/standalone.md` hoặc lấy từ `nasani_workflow` với `output_mode: "standalone"`.
+
+Giới hạn: HTML+CSS 16 MiB, mỗi asset 20 MiB, tổng assets 64 MiB, tối đa 512 assets, HTTP body 112 MiB kể cả base64/JSON. Job timeout 30 giây, Node worker heap 384 MiB; yêu cầu sát giới hạn có thể bị từ chối do timeout/bộ nhớ. HTTP mặc định tối đa 2 request đồng thời, 1 request/member, 120 request/phút/member; nhận 429 thì retry sau `Retry-After`. Không hỗ trợ JSON-RPC batch. Không ghi token, HTML/CSS/assets vào application logs. Worker riêng là giới hạn tài nguyên, không phải sandbox dành cho chạy code tùy ý; API không nhận script thực thi.
+
+Chưa có billing, dashboard, OAuth NASANI, lưu lịch sử output hay hàng đợi phân tán. Bản này mặc định chạy local trong phiên AI coding; phần host từ xa là tùy chọn và cần thử trên host thật trước khi mở cho người dùng ngoài nhóm. Validator AST không chứng minh giống Figma; AI vẫn phải render và so sánh hình ảnh.
+
+## Đóng gói và kiểm tra
+
+```sh
+npm test
+npm pack --dry-run
+npm pack
+```
+
+Gói npm đang đặt `private: true` để tránh publish nhầm. `.tgz` dùng được để cài nội bộ (`npm install -g /duong-dan/goi.tgz`, rồi gọi `nasani-mcp …`); khi nhận source thì dùng `npm ci`. Giữ lockfile khi đưa lên host. Không đưa `node_modules`, `.env`, `data`, token hoặc dự án khách hàng vào repository/gói phân phối.
+
+Test dùng MCP SDK client thật để kiểm tra STDIO, HTTP, bridge, format, chặn đường dẫn, assets, token/revoke, sửa đồng thời, rollback và installer giữ cấu hình cũ. Docker/TLS cần kiểm tra thêm trên máy có Docker và tên miền thật.
+
+Tài liệu nền tảng chính thức: [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk/tree/v1.x), [Codex MCP](https://developers.openai.com/codex/mcp/), [Codex skills](https://developers.openai.com/codex/skills/), [Codex agents](https://developers.openai.com/codex/subagents/), [Claude MCP](https://code.claude.com/docs/en/mcp), [Figma MCP](https://developers.figma.com/docs/figma-mcp-server/remote-server-installation/).

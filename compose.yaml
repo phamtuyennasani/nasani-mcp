@@ -1,0 +1,42 @@
+services:
+  nasani:
+    build: .
+    restart: unless-stopped
+    init: true
+    environment:
+      NASANI_ACCESS_FILE: /run/nasani/access.json
+      NASANI_PUBLIC_URL: https://${NASANI_DOMAIN:?Set NASANI_DOMAIN}/mcp
+      NASANI_CONCURRENCY: 2
+    volumes:
+      - ./data:/run/nasani:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=512m,mode=1777
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 64
+    mem_limit: 2g
+    cpus: 2
+    healthcheck:
+      test: [CMD, node, -e, "require('node:http').get('http://127.0.0.1:8787/healthz',{headers:{Host:new URL(process.env.NASANI_PUBLIC_URL).host}},r=>{r.resume();process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      NASANI_DOMAIN: ${NASANI_DOMAIN:?Set NASANI_DOMAIN}
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      nasani:
+        condition: service_healthy
+volumes:
+  caddy_data:
+  caddy_config:
