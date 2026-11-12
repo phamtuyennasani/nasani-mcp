@@ -4,6 +4,8 @@ This applies to NASANI standalone output only. The packaged `lib/engine/{runner,
 
 ## Document and CSS
 
+Allowed body tags are `div span h2 h3 h4 h5 h6 p a ul li form label input select textarea button img`, plus validated inline SVG. For this export contract, use `h2` for the first heading, region divs rather than `section`/`header`, and block spans or paragraphs instead of `br`. This restriction does not apply to application integration.
+
 Use an explicit HTML5 document, charset, viewport and exactly one stylesheet link to `style.css`. Each body region has this native structure, with unique semantic role names:
 
 ```html

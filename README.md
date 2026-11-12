@@ -20,7 +20,7 @@ Chỉ dùng một client thì giữ `codex` hoặc `claude-code` trong `--agent`
 
 Ở lần dùng đầu, skill hướng dẫn AI chạy helper `scripts/nasani.cjs`: tự tải runtime cố định, đăng ký MCP cho đúng dự án và gọi MCP thật qua STDIO. Nếu client chưa nạp tool mới, helper tiếp tục gọi validate/format/assets ngay trong phiên hiện tại; tên tool native `nasani_*` chỉ xuất hiện sau khi client nạp lại MCP. AI cần quyền chạy shell; trust/approval vẫn theo chính sách client. Kết nối Figma MCP riêng bằng tài khoản của bạn.
 
-Khi runtime và cấu hình đã sẵn sàng, helper gọi MCP ngay, không chạy lại setup/in hướng dẫn cài đặt ở mỗi tool. Nó vẫn kiểm tra cấu hình xung đột và symlink; thiếu runtime hoặc cấu hình thì mới chạy setup. Skill dùng lại environment và dữ liệu Figma đã có cho cùng dự án/server trong phiên; chỉ kiểm tra lại môi trường khi root/cấu hình/runtime thay đổi hoặc có lỗi kết nối/dependency. Nếu skill đã được đọc thì không cần gọi thêm `nasani_workflow`.
+Khi runtime và cấu hình đã sẵn sàng, helper gọi MCP ngay, không chạy lại setup/in hướng dẫn cài đặt ở mỗi tool. Nó vẫn kiểm tra cấu hình xung đột và symlink; thiếu runtime hoặc cấu hình thì mới chạy setup. MCP cung cấp `mode` và `project_root` ngay khi khởi tạo; helper cũng đã chọn rõ root local. Nếu đã biết đúng đích, gọi format trực tiếp; dùng `nasani_environment` khi chưa rõ mode/root hoặc cần chẩn đoán lỗi runtime. Skill dùng lại dữ liệu Figma và kết quả kiểm tra còn hiệu lực. Nếu skill đã được đọc thì không cần gọi thêm `nasani_workflow`.
 
 Nếu muốn **cài MCP ngay trong Terminal**, không chờ AI dùng skill lần đầu, chạy tại dự án:
 
@@ -64,7 +64,7 @@ npx --yes git+https://github.com/phamtuyennasani/nasani-mcp.git setup --client b
 
 Thay `both` bằng `codex` hoặc `claude`; thêm `--mcp-only` nếu chỉ muốn MCP. Có thể dùng `--project /duong-dan-tuyet-doi/du-an` thay cho thư mục hiện tại. Chạy lại giữ nguyên config phù hợp; nếu NASANI/skill đã tùy chỉnh thì báo xung đột, không tự ghi đè. Các dự án dùng chung runtime local này. Đường cài thủ công bên dưới vẫn dùng được.
 
-Sau cài, mở lại đúng dự án trong Codex/Claude và chấp thuận MCP/trust khi được hỏi. Gửi yêu cầu triển khai Figma; AI phải gọi Figma MCP đang có trước. Không cần gọi `nasani_environment` trước khi đọc Figma. Chỉ khi có output standalone cần validate/format/assets mới gọi environment một lần, rồi dùng lại kết quả. Kết nối Figma MCP bằng tài khoản riêng của từng người; installer NASANI không tự đăng nhập Figma.
+Sau cài, mở lại đúng dự án trong Codex/Claude và chấp thuận MCP/trust khi được hỏi. Gửi link Figma và vị trí cần triển khai; AI dùng Figma MCP đang có, chỉ đọc phần dữ liệu còn thiếu. Không cần environment hay health check trước khi đọc Figma. Khi đã biết mode/root và có source/assets standalone, gọi format trực tiếp. Kết nối Figma MCP bằng tài khoản riêng của từng người; installer NASANI không tự đăng nhập Figma.
 
 ## Dùng ngay trong phiên AI coding
 
@@ -98,7 +98,7 @@ Sau khi cài:
 
 1. **Codex:** mở đúng dự án và đánh dấu dự án đó là trusted qua client, rồi mở phiên mới/reload MCP. Codex có thể bỏ qua `.codex/config.toml` của dự án chưa trusted; trust thư mục cha hoặc chỉ mở lại chưa chắc đủ. Installer không tự thay cấu hình trust global. Khi format, chấp thuận `nasani_format` nếu client yêu cầu quyền ghi.
 2. **Claude Code:** mở phiên trong dự án, chấp thuận project MCP từ `.mcp.json`, dùng `/mcp` kiểm tra NASANI đã kết nối. Chấp thuận quyền gọi tool format khi được hỏi.
-3. Khi cần dùng NASANI runner, yêu cầu AI gọi `nasani_environment`. `mode` phải là `local`, `project_root` phải đúng thư mục dự án đích. Nếu sai root, sửa cấu hình/cài lại trước khi dùng runner.
+3. Đối chiếu mode/root do MCP cung cấp với dự án đích. Luồng cài mặc định là `local`; nếu chưa có thông tin này, dùng `nasani_environment` một lần. Nếu sai root, sửa cấu hình trước khi dùng runner.
 4. Kết nối **Figma MCP chính thức** trong cùng client bằng tài khoản Figma của từng người. Nếu đã có plugin Figma đang hoạt động thì dùng luôn, không thêm entry trùng.
 
 Nếu chưa cài Figma, ưu tiên plugin Figma chính thức của client. Cách đăng ký server thủ công:
@@ -120,7 +120,9 @@ Sau khi client thấy các tool NASANI và Figma, yêu cầu:
 
 `nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Kết quả có `figma_handoff` yêu cầu host dùng skill Figma chính thức nếu có, hoặc gọi `get_design_context` trực tiếp; context đã cung cấp được tái sử dụng và chỉ phần thiếu mới được đọc thêm. Tool này không probe Figma, không tự suy luận và không âm thầm gọi lại AI. Nếu tool không có hoặc lời gọi Figma lỗi, host báo lỗi thực tế. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
 
-Với output standalone, sau khi tạo đủ source/assets, gọi `nasani_format` để kiểm tra asset, validate trước/sau và format trong một lượt. Không cần chuỗi mặc định `validate → assets → format → validate` trên cùng đầu ra không đổi. Dùng `nasani_validate` cho audit chỉ đọc/chẩn đoán lỗi hoặc sau khi sửa tiếp; dùng `nasani_assets` khi cần danh sách asset/chẩn đoán. Kiểm tra build/lint/type phù hợp và so sánh browser vẫn thực hiện sau triển khai.
+Với output standalone, sau khi tạo đủ source/assets, gọi `nasani_format` để kiểm tra asset, validate trước/sau và format trong một lượt. Lỗi AST được trả chi tiết ngay trong kết quả format; sửa các lỗi rồi retry, không cần gọi validator để hỏi lại nguyên nhân. Dùng `nasani_validate` cho audit chỉ đọc hoặc sau khi sửa tiếp; dùng `nasani_assets` khi cần manifest/audit riêng. Bản runtime cũ chỉ trả lỗi format chung có thể cần một lượt validate để chẩn đoán.
+
+Format chỉ ghi source thực sự thay đổi, tránh kích hoạt watcher/build lại khi nội dung đã đúng. Các kiểm tra asset, containment, symlink/hardlink, sửa đồng thời và rollback vẫn được giữ. Skill/agent tái sử dụng context, tải asset độc lập theo lô có giới hạn, xác định crop/blend/font trước khi code và so sánh browser ở desktop/mobile. Chỉ thêm breakpoint khi thiết kế hoặc lỗi bố cục cần; sau sửa cục bộ, kiểm tra lại phần bị ảnh hưởng. Không bỏ kiểm tra giao diện chỉ vì AST đã qua.
 
 ## Chọn cách chạy
 
@@ -160,7 +162,7 @@ Dùng Claude Code thì thay `codex` bằng `claude`. Lệnh `install` cài MCP c
 
 Installer giữ cấu hình không liên quan, chạy lại cùng cấu hình sẽ không ghi thêm. Nếu đã có entry NASANI khác hoặc skill/agent đã tùy biến, nó báo xung đột để bạn sửa rõ ràng; không tự ghi đè. Cấu hình dùng đường dẫn tuyệt đối tới Node và CLI của bản NASANI này: nếu di chuyển NASANI hoặc thay Node, cập nhật entry đó trước khi cài lại. Chỉ chạy installer sau khi đã đặt NASANI ở vị trí ổn định.
 
-Mở lại dự án trong AI client, chấp thuận MCP theo giao diện client nếu được hỏi. Chỉ kiểm tra `nasani_environment` khi tác vụ cần NASANI runner. Agent dùng tên `nasani_figma` trong Codex hoặc `nasani-figma` trong Claude. Ví dụ yêu cầu:
+Mở lại dự án trong AI client, chấp thuận MCP theo giao diện client nếu được hỏi. `nasani_environment` dùng khi chưa biết mode/root hoặc cần chẩn đoán runtime. Agent dùng tên `nasani_figma` trong Codex hoặc `nasani-figma` trong Claude. Ví dụ yêu cầu:
 
 > Dùng skill nasani-figma để triển khai frame Figma tôi gửi vào route hiện tại. Đọc cấu trúc dự án, dùng Figma MCP lấy context và assets, triển khai rồi chạy các kiểm tra phù hợp.
 
@@ -171,9 +173,9 @@ Skill chọn cấu trúc/framework của dự án hiện có. Validator NASANI c
 | Tool | Input local / bridge | Input HTTP trực tiếp | Kết quả |
 | --- | --- | --- | --- |
 | `nasani_workflow` | `design_url`, `target`, `output_mode?`, `figma_context?` | Như local | Figma handoff + hướng dẫn; không kiểm tra kết nối Figma |
-| `nasani_environment` | `{}` | `{}` | Runner dependencies/mode; chỉ gọi khi cần runner |
+| `nasani_environment` | `{}` | `{}` | Chẩn đoán dependencies hoặc xác định mode/root chưa biết |
 | `nasani_validate` | `directory`, `content_width`, options | `bundle`, `content_width`, options | Lỗi AST/policy |
-| `nasani_format` | Như validate | Như validate | Local/bridge ghi 2 source; remote trả `source` |
+| `nasani_format` | Như validate | Như validate | Kiểm tra asset + AST trước/sau, lỗi chi tiết; local/bridge chỉ ghi source đổi, remote trả `source` |
 | `nasani_assets` | `directory` | `bundle` | Assets đang được tham chiếu; không xóa |
 | `nasani_swiper_scripts` | `directory`, `swipers` | `bundle`, `swipers` | Helper/app source và dependencies; không chạy JS |
 

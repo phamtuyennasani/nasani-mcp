@@ -46,6 +46,7 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     const outside = path.join(temporary, 'outside');
     fixture(output); fixture(outside);
     const client = await local(t, ['local', '--project', project]);
+    assert.ok(client.getInstructions().includes(JSON.stringify(project)), 'initialization must identify the configured root without an environment call');
     const listed = await client.listTools();
     assert.equal(listed.tools.length, 6);
     assert.equal(listed.tools.find(item => item.name === 'nasani_format').annotations.readOnlyHint, false);
@@ -73,19 +74,38 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, design_url: 'https://figma.com.evil.invalid/design/123' })).isError, true);
     assert.equal((await call(client, 'nasani_workflow', { ...workflowArgs, figma_context: 'x'.repeat(16001) })).isError, true);
     const args = { directory: 'output', content_width: 1200 };
-    assert.equal((await call(client, 'nasani_environment')).data.project_root, project);
     const before = readSources(output);
     assert.equal((await call(client, 'nasani_validate', args)).data.ok, true);
     assert.equal((await call(client, 'nasani_swiper_scripts', { directory: 'output', swipers: [] })).data.ok, true);
     assert.deepEqual(readSources(output), before);
-    assert.equal((await call(client, 'nasani_validate', { ...args, content_width: 1199 })).isError, true);
-    assert.equal((await call(client, 'nasani_format', { ...args, content_width: 1199 })).isError, true);
+    const invalidWidth = await call(client, 'nasani_validate', { ...args, content_width: 1199 });
+    assert.equal(invalidWidth.isError, true);
+    const rejectedWidth = await call(client, 'nasani_format', { ...args, content_width: 1199 });
+    assert.equal(rejectedWidth.isError, true);
+    assert.equal(rejectedWidth.data.formatted, false);
+    assert.deepEqual(rejectedWidth.data.errors, invalidWidth.data.errors, 'format must return actionable validator errors');
     assert.deepEqual(readSources(output), before);
+    const invalidHtml = html.replace('NASANI</h2>', 'NASANI<br>title</h2>');
+    fs.writeFileSync(path.join(output, 'index.html'), invalidHtml);
+    const rejectedHtml = await call(client, 'nasani_format', args);
+    assert.equal(rejectedHtml.isError, true);
+    assert.ok(rejectedHtml.data.errors.includes('Forbidden HTML tag: br.'));
+    assert.deepEqual(readSources(output), { html: invalidHtml, css });
     fs.writeFileSync(path.join(output, 'index.html'), html.replace('</h2>', '</h2><img src="assets/missing.svg" alt="">'));
     const missingAssetSource = readSources(output);
     assert.equal((await call(client, 'nasani_format', args)).isError, true);
     assert.deepEqual(readSources(output), missingAssetSource);
     fixture(output);
+    const formatter = require('../lib/engine/format.cjs');
+    const formatHtml = formatter.formatHtml;
+    formatter.formatHtml = () => invalidHtml;
+    try {
+        const rejectedOutput = require('../lib/engine/runner.cjs').format({ directory: output, content_width: 1200 });
+        assert.equal(rejectedOutput.ok, false);
+        assert.equal(rejectedOutput.formatted, false);
+        assert.ok(rejectedOutput.errors.includes('Forbidden HTML tag: br.'));
+        assert.deepEqual(readSources(output), before, 'invalid formatter output must retain the original candidate');
+    } finally { formatter.formatHtml = formatHtml; }
     assert.equal((await call(client, 'nasani_validate', { ...args, content_width: '1200' })).isError, true);
     for (const directory of ['../outside', outside, 'missing']) assert.equal((await call(client, 'nasani_validate', { ...args, directory })).isError, true);
     fs.symlinkSync(outside, path.join(project, 'linked'), 'dir');
@@ -94,6 +114,7 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     fs.unlinkSync(path.join(hard, 'style.css')); fs.linkSync(path.join(outside, 'style.css'), path.join(hard, 'style.css'));
     assert.equal((await call(client, 'nasani_format', { ...args, directory: 'hard' })).isError, true);
     assert.equal((await call(client, 'nasani_format', args)).data.ok, true);
+    assert.equal((await call(client, 'nasani_environment')).data.project_root, project);
     const formatted = readSources(output);
     assert.notDeepEqual(formatted, before);
     assert.equal((await call(client, 'nasani_format', args)).data.ok, true);
@@ -112,6 +133,18 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.throws(() => replaceSources(output, formatted, before), /Source changed/);
     assert.deepEqual(readSources(output), changed);
     const originalWrite = fs.writeFileSync;
+    const written = [];
+    fs.writeFileSync = function(filename, ...rest) {
+        written.push(filename);
+        return originalWrite.call(this, filename, ...rest);
+    };
+    try {
+        replaceSources(output, changed, changed);
+        assert.deepEqual(written, [], 'unchanged formatting must not trigger filesystem watchers');
+        replaceSources(output, changed, formatted);
+        assert.deepEqual(written, [path.join(output, 'style.css')], 'only changed source files should be written');
+    } finally { fs.writeFileSync = originalWrite; }
+    fs.writeFileSync(path.join(output, 'style.css'), changed.css);
     let failed = false;
     fs.writeFileSync = function(filename, ...rest) {
         if (filename === path.join(output, 'style.css') && !failed) { failed = true; throw new Error('simulated second write failure'); }
@@ -161,6 +194,10 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     const remoteFormat = await call(remote, 'nasani_format', { bundle, content_width: 1200 });
     assert.equal(remoteFormat.data.ok, true);
     assert.ok(remoteFormat.data.source.html.includes('\n'));
+    const remoteRejected = await call(remote, 'nasani_format', { bundle: { ...bundle, html: invalidHtml }, content_width: 1200 });
+    assert.equal(remoteRejected.isError, true);
+    assert.deepEqual(remoteRejected.data.errors, rejectedHtml.data.errors);
+    assert.equal(remoteRejected.data.source, undefined);
     for (const asset of [{ path: 'assets/../../outside.svg', base64: Buffer.from(svg).toString('base64') }, { path: 'assets/icon.svg', base64: 'not base64' }]) {
         assert.equal((await call(remote, 'nasani_assets', { bundle: { ...bundle, assets: [asset] } })).isError, true);
     }
@@ -169,6 +206,14 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.ok(!JSON.stringify(missing).includes('nasani-job-'));
     const tokenFile = path.join(temporary, 'token'); fs.writeFileSync(tokenFile, token, { mode: 0o600 });
     const bridge = await local(t, ['bridge', '--project', project, '--url', url, '--token-file', tokenFile]);
+    const bridgeOriginal = readSources(output);
+    fs.writeFileSync(path.join(output, 'index.html'), invalidHtml);
+    const bridgeInvalid = readSources(output);
+    const bridgeRejected = await call(bridge, 'nasani_format', args);
+    assert.equal(bridgeRejected.isError, true);
+    assert.ok(bridgeRejected.data.errors.includes('Forbidden HTML tag: br.'));
+    assert.deepEqual(readSources(output), bridgeInvalid);
+    fs.writeFileSync(path.join(output, 'index.html'), bridgeOriginal.html);
     assert.equal((await call(bridge, 'nasani_environment')).data.mode, 'bridge');
     assert.equal((await call(bridge, 'nasani_validate', args)).data.ok, true);
     assert.equal((await call(bridge, 'nasani_format', args)).data.ok, true);

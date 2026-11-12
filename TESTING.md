@@ -39,7 +39,18 @@ Skill có thêm helper `scripts/nasani.cjs` cho lần dùng đầu khi chưa có
 
 Test setup thay tạm module setup trong runtime thử nghiệm bằng lỗi bắt buộc, rồi xác nhận helper vẫn gọi environment/format thành công, không in log setup và không đổi config. Test còn kiểm tra cấu hình bị sửa thành NASANI tùy chỉnh phải bị từ chối, symlink config bị chặn, cấu hình bị xóa được đăng ký lại, và cả Codex/Claude đều có luồng gọi lại không chạy setup. Mọi thay đổi này nằm trong home/dự án tạm.
 
-Luồng standalone nay hướng dẫn gọi format trực tiếp sau khi có source/assets, vì tool đã kiểm tra asset và validate trước/sau. Integration test xác nhận format từ chối sai `content_width` hoặc thiếu asset mà không đổi source; các tool validate/assets riêng vẫn hoạt động. Engine, schema, kiểm tra containment, concurrent edit và rollback không được nới lỏng. Kiểm thử tự động không chứng minh mọi model sẽ tránh các bước thừa; phần once-per-session được quy định trong skill, agent và mô tả MCP.
+Luồng standalone hướng dẫn gọi format trực tiếp sau khi có source/assets, vì tool đã kiểm tra asset và validate trước/sau. Các tool validate/assets riêng vẫn hoạt động. Policy engine, schema, containment, concurrent edit và rollback không được nới lỏng. Kiểm thử tự động không chứng minh mọi model sẽ tránh các bước thừa; hành vi tái sử dụng context/check được hướng dẫn trong skill, agent và mô tả MCP.
+
+### Cải tiến sau các lượt demo — 12/11/2026
+
+- MCP trả mode/root trong thông tin khởi tạo. Test dùng SDK client thật xác nhận đọc được root và gọi runner trước environment. Helper được thử với thao tác đầu tiên là format trên project chưa có MCP config; đăng ký local và format thành công trong cùng invocation.
+- Format trả lỗi AST gốc thay vì chỉ báo lỗi chung. Test sai `content_width` đối chiếu lỗi format với validator; lỗi `br` được kiểm tra qua local, HTTP và bridge. Lỗi đầu ra formatter cũng được mô phỏng: trả nguyên nhân chi tiết, giữ source gốc. Không cần lượt validate thứ hai để biết nguyên nhân trên runtime mới.
+- Kiểm tra ghi file xác nhận source không đổi không phát sinh write, và chỉ CSS đổi thì chỉ ghi CSS. Test rollback khi write thứ hai lỗi và chống sửa đồng thời vẫn qua.
+- Skill chính giảm từ **1.442 xuống 917 từ** theo `wc -w`; hướng dẫn bootstrap chuyển sang reference chỉ đọc khi thiếu native tools. Agent Codex/Claude tái sử dụng context và kết quả của tác vụ cha; hướng dẫn QA bắt đầu ở design/mobile, mở rộng theo breakpoint/lỗi cần kiểm tra.
+
+Chạy lại trên **bản sao tạm** của demo Hannie và Shin Myung Kyo bằng MCP STDIO thật: mỗi demo chỉ gọi `nasani_format` **một lần**, không gọi environment/validate/assets trước hoặc sau; cả hai trả `ok: true`, `formatted: true`. Nội dung và mtime của hai source giữ nguyên, bản demo gốc không đổi. Thời gian riêng lời gọi format trong lượt đo là **243 ms / 426 ms**; đây không phải benchmark tổng thời gian AI hay cam kết tăng tốc theo phần trăm. Không tải lại Figma hoặc lặp QA trình duyệt vì source sau format giống hệt bản đã kiểm tra.
+
+`npm test` qua **2/2** với các assert mới và các nhánh an toàn cũ. Packaging có reference runtime mới và cả hai agent; không kèm dữ liệu demo khách hàng. Kiểm thử này xác nhận runner/installer; chưa đo lại toàn bộ lượt sinh code tự động của từng model sau thay đổi hướng dẫn.
 
 ## Dữ liệu Figma thật
 
