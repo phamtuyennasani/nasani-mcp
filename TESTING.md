@@ -35,6 +35,12 @@ Skill có thêm helper `scripts/nasani.cjs` cho lần dùng đầu khi chưa có
 
 Đã chạy riêng helper với home hoàn toàn mới, chưa có runtime, dùng đường dẫn dự án có dấu cách. Helper tải NASANI từ GitHub, tạo runtime cố định và project config Codex, rồi `nasani_environment` trả `ok: true`, `mode: local` và đúng project root ngay trong cùng invocation. Không ghi config Codex global hoặc config Claude ngoài lựa chọn. Đây là kiểm thử helper/installer/MCP, không phải bằng chứng mọi model sẽ tự thực thi đúng hướng dẫn skill hay mọi client sẽ tự nạp lại tool.
 
+## Tinh gọn các lần gọi tiếp theo
+
+Test setup thay tạm module setup trong runtime thử nghiệm bằng lỗi bắt buộc, rồi xác nhận helper vẫn gọi environment/format thành công, không in log setup và không đổi config. Test còn kiểm tra cấu hình bị sửa thành NASANI tùy chỉnh phải bị từ chối, symlink config bị chặn, cấu hình bị xóa được đăng ký lại, và cả Codex/Claude đều có luồng gọi lại không chạy setup. Mọi thay đổi này nằm trong home/dự án tạm.
+
+Luồng standalone nay hướng dẫn gọi format trực tiếp sau khi có source/assets, vì tool đã kiểm tra asset và validate trước/sau. Integration test xác nhận format từ chối sai `content_width` hoặc thiếu asset mà không đổi source; các tool validate/assets riêng vẫn hoạt động. Engine, schema, kiểm tra containment, concurrent edit và rollback không được nới lỏng. Kiểm thử tự động không chứng minh mọi model sẽ tránh các bước thừa; phần once-per-session được quy định trong skill, agent và mô tả MCP.
+
 ## Dữ liệu Figma thật
 
 Trong phiên Codex đang làm việc, Figma MCP chính thức đã đọc thành công một frame Petshop **1920 × 7490 px** do người dùng cung cấp. AI của phiên đọc context/screenshot, lấy assets và ghi trực tiếp `petshop/index.html`, `petshop/style.css`, `petshop/assets/` vào một dự án demo riêng. Không tạo ZIP. File Figma, ảnh khách hàng và bản demo không được đưa vào repository này.

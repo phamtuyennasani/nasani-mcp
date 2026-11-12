@@ -28,17 +28,21 @@ async function main() {
     if (!args || Array.isArray(args) || typeof args !== 'object') throw new Error('Tool input must be a JSON object on stdin.');
     const runtime = path.join(os.homedir(), '.local/share/nasani-mcp/runtime/node_modules/@nasani/figma-mcp');
     const cli = path.join(runtime, 'bin/nasani.cjs');
-    const setup = ['setup', '--client', values.client, '--project', root, '--mcp-only'];
-    const npm = process.env.npm_execpath || (process.platform === 'win32' ? path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js') : undefined);
-    const command = fs.existsSync(cli) || npm ? process.execPath : 'npm';
-    const commandArgs = fs.existsSync(cli) ? [cli, ...setup] : [
-        ...(npm ? [npm] : []), 'exec', '--yes', '--package=git+https://github.com/phamtuyennasani/nasani-mcp.git', '--', 'nasani-mcp', ...setup
-    ];
-    // ponytail: bootstrap on first use; a native client plugin can replace this when all target clients support it.
-    const installed = spawnSync(command, commandArgs, { cwd: root, encoding: 'utf8', timeout: 120000, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-    if (installed.stdout) process.stderr.write(installed.stdout);
-    if (installed.stderr) process.stderr.write(installed.stderr);
-    if (installed.error || installed.status !== 0) throw new Error(`MCP setup failed: ${installed.error?.message || installed.signal || installed.status}.`);
+    // Reuse installer safety checks in-process; bootstrap only when runtime/config is missing.
+    const needsSetup = !fs.existsSync(cli) || require(path.join(runtime, 'lib/install.cjs')).install({ project: root, client: values.client, mcpOnly: true, dryRun: true }).changed.length > 0;
+    if (needsSetup) {
+        const setup = ['setup', '--client', values.client, '--project', root, '--mcp-only'];
+        const npm = process.env.npm_execpath || (process.platform === 'win32' ? path.join(path.dirname(process.execPath), 'node_modules/npm/bin/npm-cli.js') : undefined);
+        const command = fs.existsSync(cli) || npm ? process.execPath : 'npm';
+        const commandArgs = fs.existsSync(cli) ? [cli, ...setup] : [
+            ...(npm ? [npm] : []), 'exec', '--yes', '--package=git+https://github.com/phamtuyennasani/nasani-mcp.git', '--', 'nasani-mcp', ...setup
+        ];
+        // ponytail: bootstrap on first use; a native client plugin can replace this when all target clients support it.
+        const installed = spawnSync(command, commandArgs, { cwd: root, encoding: 'utf8', timeout: 120000, maxBuffer: 4 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+        if (installed.stdout) process.stderr.write(installed.stdout);
+        if (installed.stderr) process.stderr.write(installed.stderr);
+        if (installed.error || installed.status !== 0) throw new Error(`MCP setup failed: ${installed.error?.message || installed.signal || installed.status}.`);
+    }
     const runtimeRequire = createRequire(path.join(runtime, 'package.json'));
     const { Client } = runtimeRequire('@modelcontextprotocol/sdk/client/index.js');
     const { StdioClientTransport } = runtimeRequire('@modelcontextprotocol/sdk/client/stdio.js');

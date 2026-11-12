@@ -20,6 +20,8 @@ Chỉ dùng một client thì giữ `codex` hoặc `claude-code` trong `--agent`
 
 Ở lần dùng đầu, skill hướng dẫn AI chạy helper `scripts/nasani.cjs`: tự tải runtime cố định, đăng ký MCP cho đúng dự án và gọi MCP thật qua STDIO. Nếu client chưa nạp tool mới, helper tiếp tục gọi validate/format/assets ngay trong phiên hiện tại; tên tool native `nasani_*` chỉ xuất hiện sau khi client nạp lại MCP. AI cần quyền chạy shell; trust/approval vẫn theo chính sách client. Kết nối Figma MCP riêng bằng tài khoản của bạn.
 
+Khi runtime và cấu hình đã sẵn sàng, helper gọi MCP ngay, không chạy lại setup/in hướng dẫn cài đặt ở mỗi tool. Nó vẫn kiểm tra cấu hình xung đột và symlink; thiếu runtime hoặc cấu hình thì mới chạy setup. Skill dùng lại environment và dữ liệu Figma đã có cho cùng dự án/server trong phiên; chỉ kiểm tra lại môi trường khi root/cấu hình/runtime thay đổi hoặc có lỗi kết nối/dependency. Nếu skill đã được đọc thì không cần gọi thêm `nasani_workflow`.
+
 Nếu muốn **cài MCP ngay trong Terminal**, không chờ AI dùng skill lần đầu, chạy tại dự án:
 
 ```sh
@@ -71,7 +73,7 @@ Luồng mặc định là **MCP local**, cài vào Codex/Claude đang dùng. AI 
 ```text
 Bạn gửi link Figma trong Codex/Claude
   → AI gọi Figma MCP để lấy context, screenshot, assets
-  → AI gọi nasani_workflow để lấy quy tắc NASANI
+  → AI dùng skill đã đọc, hoặc gọi nasani_workflow một lần
   → AI của phiên hiện tại phân tích và ghi code vào dự án
   → NASANI kiểm tra/format output phù hợp, AI render và sửa tiếp
 ```
@@ -114,9 +116,11 @@ claude mcp add --transport http figma https://mcp.figma.com/mcp
 
 Sau khi client thấy các tool NASANI và Figma, yêu cầu:
 
-> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Lấy workflow bằng nasani_workflow, đọc Figma MCP, phân tích bằng phiên AI hiện tại, ghi trực tiếp vào source rồi kiểm tra giao diện.
+> Dùng NASANI triển khai frame Figma [link của tôi] vào route/component [đích] của dự án đang mở. Dùng skill đã đọc hoặc lấy workflow một lần nếu chưa có, đọc Figma MCP, phân tích bằng phiên AI hiện tại, ghi trực tiếp vào source rồi kiểm tra giao diện.
 
 `nasani_workflow` nhận URL Figma, đích và tùy chọn tóm tắt context do AI lấy từ Figma MCP; dữ liệu thiết kế đầy đủ và screenshot có thể giữ trong context của phiên. Tool này trả hướng dẫn, không tự suy luận hay âm thầm gọi lại AI. Codex/Claude điều phối các MCP; NASANI không truy cập phiên đăng nhập của một MCP khác.
+
+Với output standalone, sau khi tạo đủ source/assets, gọi `nasani_format` để kiểm tra asset, validate trước/sau và format trong một lượt. Không cần chuỗi mặc định `validate → assets → format → validate` trên cùng đầu ra không đổi. Dùng `nasani_validate` cho audit chỉ đọc/chẩn đoán lỗi hoặc sau khi sửa tiếp; dùng `nasani_assets` khi cần danh sách asset/chẩn đoán. Kiểm tra build/lint/type phù hợp và so sánh browser vẫn thực hiện sau triển khai.
 
 ## Chọn cách chạy
 

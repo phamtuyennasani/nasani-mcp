@@ -70,6 +70,13 @@ test('local, remote, bridge and installer remain independent of the web app', { 
     assert.equal((await call(client, 'nasani_swiper_scripts', { directory: 'output', swipers: [] })).data.ok, true);
     assert.deepEqual(readSources(output), before);
     assert.equal((await call(client, 'nasani_validate', { ...args, content_width: 1199 })).isError, true);
+    assert.equal((await call(client, 'nasani_format', { ...args, content_width: 1199 })).isError, true);
+    assert.deepEqual(readSources(output), before);
+    fs.writeFileSync(path.join(output, 'index.html'), html.replace('</h2>', '</h2><img src="assets/missing.svg" alt="">'));
+    const missingAssetSource = readSources(output);
+    assert.equal((await call(client, 'nasani_format', args)).isError, true);
+    assert.deepEqual(readSources(output), missingAssetSource);
+    fixture(output);
     assert.equal((await call(client, 'nasani_validate', { ...args, content_width: '1200' })).isError, true);
     for (const directory of ['../outside', outside, 'missing']) assert.equal((await call(client, 'nasani_validate', { ...args, directory })).isError, true);
     fs.symlinkSync(outside, path.join(project, 'linked'), 'dir');

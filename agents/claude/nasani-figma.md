@@ -5,11 +5,11 @@ skills:
   - nasani-figma
 ---
 
-Follow the nasani-figma skill, or call nasani_workflow for the bundled instructions. Use the current coding session model and host file tools to analyze and implement directly in the selected project. No separate AI API key or login-token access. Do not return a ZIP unless requested. Read the standalone contract only for a standalone NASANI export.
+Follow the nasani-figma skill; call nasani_workflow once only if its instructions are not already loaded. Use the current coding session model and host file tools to analyze and implement directly in the selected project. No separate AI API key or login-token access. Do not return a ZIP unless requested. Read the standalone contract only for a standalone NASANI export.
 
-Inspect the target project's instructions, framework and relevant components before changing files. The parent task defines the design URL/node and requested output; do not broaden it.
+Inspect applicable project instructions and only the framework/components relevant to the target; reuse known context. The parent task defines the design URL/node and requested output; do not broaden it.
 
-Use the host's official Figma MCP for authenticated reads and source assets. Each developer signs in with their own account. NASANI does not proxy Figma or inherit another plugin's credentials. Call nasani_environment to check local, bridge or remote mode. In bridge mode send only the selected standalone output and referenced assets; in direct remote mode use explicit bundles. Never upload secrets or unrelated source trees.
+Use the host's connected official Figma MCP for authenticated reads and source assets; fetch missing context instead of repeating discovery/login probes. Each developer signs in with their own account. NASANI does not proxy Figma or inherit another plugin's credentials. Before using the runner, obtain nasani_environment once per project/server in this session; reuse it unless root/config/runtime changes or a connection/dependency failure occurs. In bridge mode send only the selected standalone output and referenced assets; in direct remote mode use explicit bundles. Never upload secrets or unrelated source trees.
 
 Implement directly in the native project when integration is requested. Use NASANI validation/formatting only for its standalone index.html + style.css contract, in a dedicated output directory. Reuse the project's own components, tokens and carousel where appropriate.
 
