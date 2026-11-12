@@ -16,14 +16,39 @@ Bạn gửi link Figma trong Codex/Claude
 
 Không cần URL server NASANI, token NASANI, trang web cấu hình hoặc API key AI riêng. NASANI không đọc token đăng nhập Codex/Claude: phần suy luận diễn ra trong client theo quyền sử dụng của phiên đang mở. Bạn vẫn phải kết nối Figma MCP bằng tài khoản Figma của mình và cho AI client quyền sửa dự án.
 
-Cài **chỉ MCP** (Node.js >=22), chạy trong thư mục project NASANI:
+Cài **chỉ MCP** (Git và Node.js >=22). Đặt công cụ ở một thư mục cố định, riêng với dự án cần triển khai:
 
 ```sh
-npm ci --ignore-scripts
-node bin/nasani.cjs install --client codex --project /duong-dan-tuyet-doi/du-an-cua-ban --mcp-only
+mkdir -p "$HOME/.local/share"
+git clone https://github.com/phamtuyennasani/nasani-mcp.git "$HOME/.local/share/nasani-mcp"
+export NASANI_HOME="$HOME/.local/share/nasani-mcp"
+npm ci --ignore-scripts --prefix "$NASANI_HOME"
+
+cd /duong-dan-tuyet-doi/du-an-cua-ban
+node "$NASANI_HOME/bin/nasani.cjs" install --client codex --project "$PWD" --mcp-only
 ```
 
-Claude Code dùng `--client claude`. Không cần chép skill/agent khi dùng `--mcp-only`: tool `nasani_workflow` trả hướng dẫn được đóng gói trong MCP. Vẫn cần đăng ký MCP local một lần để client biết lệnh khởi động và dự án được phép xử lý. Mở lại/reload MCP trong client sau khi cài; không giả định server mới tự xuất hiện ngay trong phiên đã khởi động.
+`NASANI_HOME` là source của công cụ; `--project` là dự án được phép đọc/format. Chạy installer cho mỗi dự án đích. Nếu đã clone công cụ thì bỏ bước clone, dùng đường dẫn hiện có và chạy `npm ci --ignore-scripts` ở đó. Claude Code dùng `--client claude`. Không cần chép skill/agent khi dùng `--mcp-only`: tool `nasani_workflow` trả hướng dẫn được đóng gói trong MCP.
+
+Sau khi cài:
+
+1. **Codex:** mở đúng dự án và đánh dấu dự án đó là trusted qua client, rồi mở phiên mới/reload MCP. Codex có thể bỏ qua `.codex/config.toml` của dự án chưa trusted; trust thư mục cha hoặc chỉ mở lại chưa chắc đủ. Installer không tự thay cấu hình trust global. Khi format, chấp thuận `nasani_format` nếu client yêu cầu quyền ghi.
+2. **Claude Code:** mở phiên trong dự án, chấp thuận project MCP từ `.mcp.json`, dùng `/mcp` kiểm tra NASANI đã kết nối. Chấp thuận quyền gọi tool format khi được hỏi.
+3. Yêu cầu AI gọi `nasani_environment`. `mode` phải là `local`, `project_root` phải đúng thư mục dự án đích. Nếu sai root, sửa cấu hình/cài lại trước khi sửa source.
+4. Kết nối **Figma MCP chính thức** trong cùng client bằng tài khoản Figma của từng người. Nếu đã có plugin Figma đang hoạt động thì dùng luôn, không thêm entry trùng.
+
+Nếu chưa cài Figma, ưu tiên plugin Figma chính thức của client. Cách đăng ký server thủ công:
+
+```sh
+# Codex: chạy một lần rồi đăng nhập bằng tài khoản Figma của bạn.
+codex mcp add figma --url https://mcp.figma.com/mcp
+codex mcp login figma
+
+# Hoặc Claude Code: chạy trong dự án, mở phiên mới rồi /mcp → figma → Authenticate.
+claude mcp add --transport http figma https://mcp.figma.com/mcp
+```
+
+Đăng nhập trên trang Figma và chọn Allow access. Mỗi người chỉ đọc được các file mà tài khoản của họ có quyền xem. Không nhập token Figma/AI vào NASANI. Xem [hướng dẫn Figma chính thức](https://developers.figma.com/docs/figma-mcp-server/remote-server-installation/) nếu giao diện client khác.
 
 Sau khi client thấy các tool NASANI và Figma, yêu cầu:
 
@@ -105,5 +130,7 @@ npm pack
 Gói npm đang đặt `private: true` để tránh publish nhầm. `.tgz` dùng được để cài nội bộ (`npm install -g /duong-dan/goi.tgz`, rồi gọi `nasani-mcp …`); khi nhận source thì dùng `npm ci`. Giữ lockfile khi đưa lên host. Không đưa `node_modules`, `.env`, `data`, token hoặc dự án khách hàng vào repository/gói phân phối.
 
 Test dùng MCP SDK client thật để kiểm tra STDIO, HTTP, bridge, format, chặn đường dẫn, assets, token/revoke, sửa đồng thời, rollback và installer giữ cấu hình cũ. Docker/TLS cần kiểm tra thêm trên máy có Docker và tên miền thật.
+
+Kết quả kiểm thử trên Figma thật và client Codex/Claude được ghi tại [TESTING.md](TESTING.md). Demo của khách hàng được giữ ở máy kiểm thử, không đưa vào repository công khai.
 
 Tài liệu nền tảng chính thức: [MCP SDK](https://github.com/modelcontextprotocol/typescript-sdk/tree/v1.x), [Codex MCP](https://developers.openai.com/codex/mcp/), [Codex skills](https://developers.openai.com/codex/skills/), [Codex agents](https://developers.openai.com/codex/subagents/), [Claude MCP](https://code.claude.com/docs/en/mcp), [Figma MCP](https://developers.figma.com/docs/figma-mcp-server/remote-server-installation/).
